@@ -1,0 +1,15 @@
+node_modules/
+.env
+.DS_Store
+*.log
+dist/
+build/
+
+db.sqlite
+
+# Additional security-related files
+.env*
+*.pem
+*config*.json
+secrets/
+credentials/
