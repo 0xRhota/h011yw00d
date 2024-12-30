@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import type { Character } from '../types/Character';
 import type { Message } from '../types/Message';
+import { getChatCompletion } from '../utils/openai';
 
 export function useChat(character: Character) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -15,20 +16,46 @@ export function useChat(character: Character) {
     };
     setMessages(prev => [...prev, userMessage]);
     
-    // Simulate bot typing
+    // Start typing indicator
     setIsTyping(true);
     
-    // Simulate bot response after a delay
-    setTimeout(() => {
+    try {
+      // Prepare messages for OpenAI
+      const systemMessage = `You are ${character.name}. ${character.bio.join(' ')}
+        Style guide: ${character.style.all.join(' ')} ${character.style.chat.join(' ')}`;
+      
+      const chatMessages = [
+        { role: 'system', content: systemMessage },
+        ...messages.map(msg => ({
+          role: msg.sender === 'user' ? 'user' : 'assistant',
+          content: msg.text
+        })),
+        { role: 'user', content: text }
+      ] as const;
+
+      // Get AI response
+      const response = await getChatCompletion(chatMessages);
+      
+      // Add bot message
       const botMessage: Message = {
         sender: 'bot',
-        text: `As ${character.name}, I acknowledge your message: "${text}"`,
+        text: response,
         timestamp: Date.now(),
       };
       setMessages(prev => [...prev, botMessage]);
+    } catch (error) {
+      console.error('Failed to get chat response:', error);
+      // Add error message
+      const errorMessage: Message = {
+        sender: 'bot',
+        text: 'Sorry, I encountered an error while processing your message.',
+        timestamp: Date.now(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
       setIsTyping(false);
-    }, 1000 + Math.random() * 1000); // Random delay between 1-2 seconds
-  }, [character]);
+    }
+  }, [character, messages]);
 
   return {
     messages,
